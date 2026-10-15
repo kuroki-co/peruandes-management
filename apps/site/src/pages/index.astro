@@ -1,0 +1,28 @@
+---
+const portalUrl = import.meta.env.PUBLIC_MANAGEMENT_URL;
+const services = [
+  { name: "Full Day", duration: "1 día", text: "Excursión al Cañón del Colca." },
+  { name: "2D TREK", duration: "2 días · 1 noche", text: "Trekking al Colca con alojamiento." },
+  { name: "3D TREK", duration: "3 días · 2 noches", text: "Trekking de tres días al Cañón del Colca." },
+];
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Perú Andes, agencia operadora de excursiones y trekkings al Cañón del Colca desde Arequipa." />
+    <title>Perú Andes | Operadora de turismo en Arequipa</title>
+  </head>
+  <body>
+    <header><a class="brand" href="/">△ PERÚ ANDES</a><nav aria-label="Principal"><a href="#servicios">Servicios</a><a href="#intermediarios">Hoteles y agencias</a>{portalUrl && <a class="button" href={portalUrl}>Acceso del equipo ↗</a>}</nav></header>
+    <main>
+      <section class="hero"><div><span class="eyebrow">AREQUIPA · CAÑÓN DEL COLCA</span><h1>El siguiente viaje.<br />Una operación<br /><em>bien conectada.</em></h1><p>Excursiones y trekkings al Colca, coordinados por Perú Andes para hoteles y agencias de viajes.</p><a class="button primary" href="#servicios">Explorar nuestros servicios ↓</a></div><div class="landscape" aria-hidden="true"><svg viewBox="0 0 500 400"><path d="M0 320 145 65l110 176 80-137 165 216"/><path d="m75 185 70 60 53-97m103 20 34 26 37-30"/><path d="M0 360h500M30 380h440"/></svg><span>PERÚ ANDES<br /><small>OPERACIÓN TURÍSTICA</small></span></div></section>
+      <section id="servicios"><span class="eyebrow">NUESTROS SERVICIOS</span><h2>Tres maneras de conocer el Colca.</h2><div class="service-grid">{services.map((s,i)=><article><span class="service-number">0{i+1}</span><h3>{s.name}</h3><small>{s.duration}</small><p>{s.text}</p></article>)}</div></section>
+      <section id="intermediarios" class="partners"><div><span class="eyebrow">HOTELES Y AGENCIAS</span><h2>Tu reserva llega directamente<br />a nuestro equipo.</h2></div><div><p>Perú Andes proporciona a cada intermediario un enlace exclusivo para registrar pasajeros, lugares de recojo, adicionales y conexiones. Los acuerdos y tarifas se coordinan individualmente.</p><p class="muted">Si ya trabajas con nosotros, utiliza el enlace de reservas que te proporcionó Perú Andes.</p></div></section>
+    </main><footer><span>PERÚ ANDES</span><span>Arequipa, Perú · Agencia operadora de turismo</span></footer>
+  </body>
+</html>
+<style>
+  :global(*){box-sizing:border-box} :global(html){scroll-behavior:smooth} :global(body){margin:0;background:#f6f7fb;color:#202838;font-family:system-ui,sans-serif;font-size:14px;line-height:1.6} :global(a){color:inherit;text-decoration:none} :global(a:focus-visible){outline:3px solid #91aaef;outline-offset:4px} header,main,footer{max-width:1180px;margin:auto} header{display:flex;justify-content:space-between;align-items:center;padding:28px 30px;border-bottom:1px solid #e2e6ed;gap:20px}.brand{font-weight:750;letter-spacing:1px;color:#2145a5}nav{display:flex;align-items:center;gap:26px;font-size:12px;color:#67748a}.button{display:inline-flex;align-items:center;gap:8px;padding:11px 17px;background:white;border:1px solid #e2e6ed;border-radius:7px;font-size:12px;font-weight:550}.primary{background:#2145a5;color:white;border-color:#2145a5}.hero{display:grid;grid-template-columns:1fr 1fr;align-items:center;padding:80px 30px;gap:60px}.eyebrow{font-size:10px;color:#7788a8;letter-spacing:2px;font-weight:650}h1{font-size:clamp(35px,5vw,59px);line-height:1.15;letter-spacing:-2px;margin:20px 0}h1 em{font-style:normal;color:#2145a5}.hero p{max-width:390px;color:#758092;margin:24px 0;font-size:14px}.landscape{background:#edf1fc;border-radius:14px;padding:35px;text-align:center;color:#2145a5}.landscape svg{width:100%;max-height:300px;stroke:currentColor;stroke-width:2;fill:none;opacity:.65}.landscape>span{display:block;letter-spacing:3px;font-weight:650;margin-top:12px}.landscape small{font-size:9px;color:#91a0bf;letter-spacing:3px}#servicios{padding:40px 30px 70px}h2{font-size:27px;line-height:1.3;letter-spacing:-.6px;font-weight:600;margin:13px 0 25px}.service-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.service-grid article{background:white;border:1px solid #e2e6ed;padding:30px;border-radius:8px}.service-number{color:#b1bed7;font-size:12px;letter-spacing:2px}.service-grid h3{font-size:22px;margin:23px 0 4px}.service-grid small{font-size:11px;color:#2145a5}.service-grid p{color:#788396;font-size:12px;margin-top:20px}.partners{padding:40px 30px;display:grid;grid-template-columns:1fr 1fr;gap:50px;border-top:1px solid #e2e6ed}.partners p{color:#5b697e;font-size:13px}.partners .muted{font-size:11px;color:#8995a7;margin-top:25px}footer{display:flex;justify-content:space-between;padding:30px;color:#929eb2;font-size:10px;border-top:1px solid #e2e6ed}@media(max-width:750px){header{flex-wrap:wrap}nav{gap:16px;flex-wrap:wrap}.hero{grid-template-columns:1fr;padding-top:50px;gap:35px}.landscape svg{max-height:200px}.service-grid{grid-template-columns:1fr}.partners{grid-template-columns:1fr;gap:0}footer{flex-direction:column;gap:10px}}@media(prefers-reduced-motion:reduce){:global(html){scroll-behavior:auto}}
+</style>
