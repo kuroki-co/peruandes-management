@@ -17,6 +17,7 @@ const emptyPassenger = {
   full_name: "",
   phone: "",
   pickup: "",
+  pickup_time: "",
   notes: "",
   dietary: "",
   allergies: "",
@@ -302,6 +303,7 @@ export function BookingForm({
                       label: "Hotel o lugar de recojo",
                       required: true,
                     },
+                    { key: "pickup_time", label: "Hora de recojo" },
                     { key: "dietary", label: "Requerimientos alimentarios" },
                   ] as const
                 ).map((f) => (
@@ -312,12 +314,18 @@ export function BookingForm({
                     </label>
                     <input
                       id={`${domId}-${f.key}`}
+                      type={f.key === "pickup_time" ? "time" : "text"}
                       {...register(`passengers.${index}.${f.key}`)}
                       aria-invalid={Boolean(e?.[f.key])}
                       aria-describedby={
                         e?.[f.key] ? `${domId}-${f.key}-error` : undefined
                       }
                     />
+                    {f.key === "pickup_time" && (
+                      <small>
+                        Si aún no está confirmada, puedes dejarla pendiente.
+                      </small>
+                    )}
                     {e?.[f.key] && (
                       <small
                         id={`${domId}-${f.key}-error`}

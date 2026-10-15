@@ -98,6 +98,7 @@ const booking = {
     {
       full_name: "Pasajero Uno",
       pickup: "Hotel de prueba",
+      pickup_time: "05:30",
       extras: [{ extra_id: snapshot.extras[0].id, quantity: 1 }],
     },
     {
@@ -132,6 +133,53 @@ await assert.rejects(
 const reservations = await rpc("workspace_data", { p_module: "bookings" });
 assert.equal(reservations.bookings.length, 1);
 assert.equal(reservations.passengers.length, 2);
+const pickupPassenger = reservations.passengers.find(
+  (p) => p.full_name === "Pasajero Uno",
+);
+assert.equal(pickupPassenger.pickup_time, "05:30:00");
+assert.equal(
+  reservations.passengers.find((p) => p.full_name === "Pasajero Dos")
+    .pickup_time,
+  null,
+);
+await rpc("update_passenger", {
+  p_id: pickupPassenger.id,
+  p_data: { ...pickupPassenger, pickup_time: "06:15" },
+});
+assert.equal(
+  (await rpc("workspace_data", { p_module: "operations" })).passengers.find(
+    (p) => p.id === pickupPassenger.id,
+  ).pickup_time,
+  "06:15:00",
+);
+await assert.rejects(
+  rpc("update_passenger", {
+    p_id: pickupPassenger.id,
+    p_data: { ...pickupPassenger, pickup_time: "24:00" },
+  }),
+);
+await assert.rejects(
+  rpc("create_public_booking", {
+    p_token: token,
+    p_data: {
+      ...booking,
+      request_id: randomUUID(),
+      passengers: [
+        { full_name: "Hora inválida", pickup: "Hotel", pickup_time: "25:99" },
+      ],
+    },
+  }),
+);
+await rpc("update_passenger", {
+  p_id: pickupPassenger.id,
+  p_data: { ...pickupPassenger, pickup_time: "" },
+});
+assert.equal(
+  (await rpc("workspace_data", { p_module: "bookings" })).passengers.find(
+    (p) => p.id === pickupPassenger.id,
+  ).pickup_time,
+  null,
+);
 assert.equal(Number(reservations.bookings[0].tour_rate), 60);
 await rpc("save_tariff", {
   p_intermediary: hotel,

@@ -303,6 +303,10 @@ export function ModuleScreen({
     f("full_name", "Nombre completo", "text", undefined, true),
     f("phone", "Teléfono"),
     f("pickup", "Hotel o lugar de recojo", "text", undefined, true),
+    {
+      ...f("pickup_time", "Hora de recojo", "time"),
+      hint: "Déjala vacía si aún está por coordinar.",
+    },
     f("dietary", "Requerimientos alimentarios", "textarea"),
     f("allergies", "Alergias relevantes", "textarea"),
     f("medication", "Medicación comunicada", "textarea"),
@@ -955,6 +959,7 @@ export function ModuleScreen({
       "Intermediario",
       "Teléfono",
       "Recojo",
+      "Hora de recojo",
       "Adicionales",
       "Asistencia",
     ];
@@ -973,6 +978,7 @@ export function ModuleScreen({
           intermediaryName(text(b, "intermediary_id")),
           text(p, "phone"),
           text(p, "pickup"),
+          text(p, "pickup_time").slice(0, 5) || "Por coordinar",
           list("passenger_extras")
             .filter((e) => text(e, "passenger_id") === text(p, "id"))
             .map(
@@ -987,6 +993,7 @@ export function ModuleScreen({
             {edit("Corregir datos del pasajero", "passenger", passengerFields, {
               ...p,
               ...health,
+              pickup_time: text(p, "pickup_time").slice(0, 5),
               id: p.id,
             })}
             <TableAction
@@ -1099,6 +1106,7 @@ export function ModuleScreen({
       "Intermediario",
       "Teléfono",
       "Recojo",
+      "Hora de recojo",
       "Movilidad",
       "Conductor",
       "Guía",
@@ -1139,6 +1147,7 @@ export function ModuleScreen({
           intermediaryName(text(b, "intermediary_id")),
           text(p, "phone"),
           text(p, "pickup"),
+          text(p, "pickup_time").slice(0, 5) || "Por coordinar",
           lookup("vehicles", text(d, "vehicle_id"), "plate") || "Sin asignar",
           lookup("crew", text(d, "driver_id")),
           lookup("crew", text(d, "guide_id")),

@@ -62,6 +62,10 @@ export const passengerSchema = z.object({
   full_name: name,
   phone: contact.phone,
   pickup: z.string().trim().min(2, "Indica el lugar de recojo.").max(250),
+  pickup_time: z
+    .string()
+    .regex(/^$|^(?:[01]\d|2[0-3]):[0-5]\d$/, "Indica una hora válida (HH:mm).")
+    .default(""),
   notes,
   dietary: notes,
   allergies: notes,
