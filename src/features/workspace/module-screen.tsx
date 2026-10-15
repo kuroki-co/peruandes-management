@@ -10,6 +10,8 @@ import {
 import { BookingForm } from "./booking-form";
 import { bookingLinkPath } from "./booking-link";
 import { moduleGuidance, tabGuidance } from "./experience";
+import { LoadingButton } from "@/components/ui/loading";
+import { TableAction, TableActionLink } from "@/components/ui/table-action";
 import { performAction } from "./actions";
 import {
   modules,
@@ -132,6 +134,8 @@ export function ModuleScreen({
   const [noticeError, setNoticeError] = useState(false);
   const [pendingRevoke, setPendingRevoke] = useState<Row | null>(null);
   const [revoking, setRevoking] = useState(false);
+  const [removingLodging, setRemovingLodging] = useState("");
+  const [copyingLink, setCopyingLink] = useState("");
   const [dateFilter, setDateFilter] = useState(today());
   const [serviceFilter, setServiceFilter] = useState("");
   const [intermediaryFilter, setIntermediaryFilter] = useState("");
@@ -191,12 +195,13 @@ export function ModuleScreen({
     fields: Field[],
     initial: Row,
   ) => (
-    <button
-      className="text-button"
+    <TableAction
+      icon="edit"
+      label={title}
       onClick={() => open(title, kind, fields, initial)}
     >
       Editar
-    </button>
+    </TableAction>
   );
   const intermediaryFields = [
     f("name", "Nombre comercial", "text", undefined, true),
@@ -363,17 +368,28 @@ export function ModuleScreen({
     },
   ];
   async function revokeLink(row: Row) {
+    if (revoking) return;
     setRevoking(true);
-    const result = await performAction("link", {
-      intermediary_id: row.intermediary_id,
-      revoke_id: row.id,
-    });
-    setNoticeError(!result.ok);
-    setNotice(result.message);
-    setRevoking(false);
-    setPendingRevoke(null);
+    try {
+      const result = await performAction("link", {
+        intermediary_id: row.intermediary_id,
+        revoke_id: row.id,
+      });
+      setNoticeError(!result.ok);
+      setNotice(result.message);
+      setPendingRevoke(null);
+    } catch {
+      setNoticeError(true);
+      setNotice(
+        "No se pudo revocar el enlace. Comprueba tu conexión e inténtalo de nuevo.",
+      );
+    } finally {
+      setRevoking(false);
+    }
   }
   async function copyLink(row: Row) {
+    if (copyingLink) return;
+    setCopyingLink(text(row, "id"));
     try {
       await navigator.clipboard.writeText(
         `${location.origin}${bookingLinkPath(intermediaryName(text(row, "intermediary_id")), text(row, "token"))}`,
@@ -385,6 +401,8 @@ export function ModuleScreen({
       setNotice(
         "No se pudo copiar el enlace. Puedes abrir el formulario y copiar su dirección.",
       );
+    } finally {
+      setCopyingLink("");
     }
   }
   let tabs: { id: string; name: string }[] = [];
@@ -727,8 +745,8 @@ export function ModuleScreen({
             intermediaryFields,
             r,
           )}
-          <button
-            className="text-button"
+          <TableAction
+            icon="history"
             onClick={() => {
               setIntermediaryFilter(text(r, "id"));
               setDateFilter("");
@@ -736,7 +754,7 @@ export function ModuleScreen({
             }}
           >
             Reservas
-          </button>
+          </TableAction>
         </>
       ),
     }));
@@ -773,11 +791,18 @@ export function ModuleScreen({
       ],
       action: r.active ? (
         <>
-          <button className="text-button" onClick={() => copyLink(r)}>
+          <TableAction
+            icon="copy"
+            type="button"
+            pending={copyingLink === text(r, "id")}
+            disabled={Boolean(copyingLink)}
+            pendingLabel="Copiando…"
+            onClick={() => copyLink(r)}
+          >
             Copiar enlace
-          </button>
-          <Link
-            className="text-button"
+          </TableAction>
+          <TableActionLink
+            icon="external"
             target="_blank"
             rel="noreferrer"
             href={bookingLinkPath(
@@ -786,13 +811,14 @@ export function ModuleScreen({
             )}
           >
             Ver formulario
-          </Link>
-          <button
-            className="text-button danger"
+          </TableActionLink>
+          <TableAction
+            icon="revoke"
+            className="danger"
             onClick={() => setPendingRevoke(r)}
           >
             Revocar
-          </button>
+          </TableAction>
         </>
       ) : undefined,
     }));
@@ -844,8 +870,8 @@ export function ModuleScreen({
               ],
               b,
             )}
-            <button
-              className="text-button"
+            <TableAction
+              icon="finance"
               onClick={() =>
                 open(
                   "Corrección comercial explícita",
@@ -887,7 +913,7 @@ export function ModuleScreen({
               }
             >
               Corregir tarifa / servicio
-            </button>
+            </TableAction>
           </>
         ) : undefined,
     }));
@@ -963,8 +989,8 @@ export function ModuleScreen({
               ...health,
               id: p.id,
             })}
-            <button
-              className="text-button"
+            <TableAction
+              icon="extras"
               onClick={() =>
                 open(
                   "Adicionales del pasajero",
@@ -990,7 +1016,7 @@ export function ModuleScreen({
               }
             >
               Adicionales
-            </button>
+            </TableAction>
           </>
         ),
       };
@@ -1143,8 +1169,8 @@ export function ModuleScreen({
           cells,
           action: (
             <>
-              <button
-                className="text-button"
+              <TableAction
+                icon="vehicle"
                 onClick={() =>
                   open(
                     "Asignar movilidad",
@@ -1172,9 +1198,9 @@ export function ModuleScreen({
                 }
               >
                 Asignar
-              </button>
-              <button
-                className="text-button"
+              </TableAction>
+              <TableAction
+                icon="attendance"
                 onClick={() =>
                   open(
                     "Registrar asistencia",
@@ -1193,7 +1219,7 @@ export function ModuleScreen({
                 }
               >
                 Asistencia
-              </button>
+              </TableAction>
             </>
           ),
         };
@@ -1250,15 +1276,33 @@ export function ModuleScreen({
       action: (
         <>
           {edit("Modificar alojamiento", "lodging", lodgingFields, r)}
-          <button
-            className="text-button danger"
+          <TableAction
+            icon="remove"
+            className="danger"
+            pending={removingLodging === text(r, "id")}
+            disabled={Boolean(removingLodging)}
+            pendingLabel="Retirando…"
             onClick={async () => {
-              const result = await performAction("removeLodging", { id: r.id });
-              setNotice(result.message);
+              if (removingLodging) return;
+              setRemovingLodging(text(r, "id"));
+              try {
+                const result = await performAction("removeLodging", {
+                  id: r.id,
+                });
+                setNoticeError(!result.ok);
+                setNotice(result.message);
+              } catch {
+                setNoticeError(true);
+                setNotice(
+                  "No se pudo retirar la asignación. Inténtalo de nuevo.",
+                );
+              } finally {
+                setRemovingLodging("");
+              }
             }}
           >
             Retirar asignación
-          </button>
+          </TableAction>
         </>
       ),
     }));
@@ -2339,13 +2383,14 @@ export function ModuleScreen({
             >
               Conservar enlace
             </button>
-            <button
+            <LoadingButton
               className="btn danger-button"
-              disabled={revoking}
+              pending={revoking}
+              pendingLabel="Revocando…"
               onClick={() => revokeLink(pendingRevoke)}
             >
-              {revoking ? "Revocando…" : "Revocar enlace"}
-            </button>
+              Revocar enlace
+            </LoadingButton>
           </div>
         </EditorDialog>
       )}

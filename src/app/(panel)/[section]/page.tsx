@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { modules } from "@/features/workspace/model";
 import { loadWorkspace } from "@/features/workspace/data";
 import { ModuleScreen } from "@/features/workspace/module-screen";
+import { LoadingIndicator } from "@/components/ui/loading";
 async function Content({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params;
   const targetModule = modules.find((m) => m.path === `/${section}`);
@@ -42,9 +43,7 @@ export default function ModulePage(props: {
   params: Promise<{ section: string }>;
 }) {
   return (
-    <Suspense
-      fallback={<div className="loading-page">Cargando información…</div>}
-    >
+    <Suspense fallback={<LoadingIndicator />}>
       <Content {...props} />
     </Suspense>
   );

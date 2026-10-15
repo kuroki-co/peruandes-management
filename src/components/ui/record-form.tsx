@@ -11,6 +11,7 @@ import {
 import { performAction } from "@/features/workspace/actions";
 import type { Row } from "@/features/workspace/model";
 import { validationMessage } from "./validation-message";
+import { LoadingButton } from "./loading";
 export type Option = { value: string; label: string };
 export type Field = {
   key: string;
@@ -235,13 +236,15 @@ export function RecordForm({
               Cancelar
             </button>
           )}
-          <button className="btn primary" disabled={!ready || isSubmitting}>
-            {isSubmitting
-              ? "Guardando…"
-              : initial.id
-                ? "Guardar cambios"
-                : "Guardar registro"}
-          </button>
+          <LoadingButton
+            type="submit"
+            className="btn primary"
+            disabled={!ready}
+            pending={isSubmitting}
+            pendingLabel="Guardando…"
+          >
+            {initial.id ? "Guardar cambios" : "Guardar registro"}
+          </LoadingButton>
         </div>
       </footer>
     </form>

@@ -11,6 +11,7 @@ import {
 import { performAction, submitPublicBooking } from "./actions";
 import { text, number, money, today, type Row } from "./model";
 import { validationMessage } from "@/components/ui/validation-message";
+import { LoadingButton } from "@/components/ui/loading";
 
 const emptyPassenger = {
   full_name: "",
@@ -496,7 +497,10 @@ export function BookingForm({
               Cancelar
             </button>
           )}
-          <button
+          <LoadingButton
+            type="submit"
+            pending={isSubmitting}
+            pendingLabel="Registrando…"
             className="btn primary"
             disabled={
               !ready ||
@@ -505,8 +509,8 @@ export function BookingForm({
               services.filter((s) => s.active !== false).length === 0
             }
           >
-            {isSubmitting ? "Registrando…" : "Registrar reserva"}
-          </button>
+            Registrar reserva
+          </LoadingButton>
         </div>
       </footer>
     </form>

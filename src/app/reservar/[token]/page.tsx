@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { BookingForm } from "@/features/workspace/booking-form";
 import { bookingTokenFromCode } from "@/features/workspace/booking-link";
+import { LoadingIndicator } from "@/components/ui/loading";
 export const metadata = {
   title: "Reservas | Perú Andes",
   robots: { index: false, follow: false },
@@ -78,7 +79,14 @@ export default function PublicBookingPage(props: {
 }) {
   return (
     <main className="public-booking">
-      <Suspense fallback={<p>Cargando formulario…</p>}>
+      <Suspense
+        fallback={
+          <LoadingIndicator
+            label="Cargando formulario de reserva…"
+            fullscreen
+          />
+        }
+      >
         <PublicForm {...props} />
       </Suspense>
     </main>

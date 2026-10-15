@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { LoadingButton } from "@/components/ui/loading";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +12,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isNavigating, startTransition] = useTransition();
   const {
     register,
     handleSubmit,
@@ -30,15 +32,22 @@ export function LoginForm({ configured }: { configured: boolean }) {
         );
         return;
       }
-      router.replace("/dashboard");
-      router.refresh();
+      startTransition(() => {
+        router.replace("/dashboard");
+        router.refresh();
+      });
     } catch {
       setMessage("No se pudo conectar. Inténtalo de nuevo en unos momentos.");
     }
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="login-form">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      noValidate
+      className="login-form"
+      aria-busy={isSubmitting || isNavigating}
+    >
       {!configured && (
         <p role="status">El acceso estará disponible al conectar Supabase.</p>
       )}
@@ -90,13 +99,15 @@ export function LoginForm({ configured }: { configured: boolean }) {
       <p role="status" aria-live="polite">
         {message}
       </p>
-      <button
+      <LoadingButton
         type="submit"
-        disabled={!configured || isSubmitting}
+        disabled={!configured}
+        pending={isSubmitting || isNavigating}
+        pendingLabel="Ingresando…"
         className="rounded-md bg-foreground p-3 text-background disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
-        {isSubmitting ? "Ingresando…" : "Iniciar sesión"}
-      </button>
+        Iniciar sesión
+      </LoadingButton>
     </form>
   );
 }

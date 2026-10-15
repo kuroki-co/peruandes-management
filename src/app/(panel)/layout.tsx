@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { session } from "@/features/workspace/data";
 import { Shell } from "@/features/workspace/shell";
+import { LoadingIndicator } from "@/components/ui/loading";
 async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
   const ctx = await session();
   if (ctx.status === "denied")
@@ -29,7 +30,7 @@ export default function PanelLayout({
   return (
     <Suspense
       fallback={
-        <div className="loading-page">Cargando tu espacio de trabajo…</div>
+        <LoadingIndicator label="Cargando tu espacio de trabajo…" fullscreen />
       }
     >
       <AuthenticatedShell>{children}</AuthenticatedShell>

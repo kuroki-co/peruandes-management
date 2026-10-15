@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { modules, canAccess, type Access } from "./model";
 import { logout } from "./actions";
+import { FormSubmitButton } from "@/components/ui/form-submit-button";
 export function Shell({
   access,
   children,
@@ -116,13 +117,14 @@ export function Shell({
             </div>
             {access && (
               <form action={logout}>
-                <button
+                <FormSubmitButton
+                  pendingLabel="Saliendo…"
                   className="icon-button"
                   title="Cerrar sesión"
                   aria-label="Cerrar sesión"
                 >
                   ↪
-                </button>
+                </FormSubmitButton>
               </form>
             )}
           </div>
