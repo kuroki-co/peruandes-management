@@ -10,7 +10,7 @@ export function bookingLinkPath(name: string, token: string): string {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 70)
-      .replace(/-$/, "") || "intermediario";
+      .replace(/-$/, "") || "endosador";
   const binary = token
     .match(/../g)!
     .map((hex) => String.fromCharCode(parseInt(hex, 16)))

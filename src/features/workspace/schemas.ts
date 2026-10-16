@@ -100,7 +100,7 @@ export const actionSchemas = {
   tariff: z.object({ intermediary_id: id, service_id: id, amount }),
   link: z.object({ intermediary_id: id, revoke_id: optionalId }),
   booking: bookingSchema.refine((v) => Boolean(v.intermediary_id), {
-    message: "Selecciona el intermediario.",
+    message: "Selecciona el endosador.",
     path: ["intermediary_id"],
   }),
   correction: z.object({
@@ -216,7 +216,7 @@ export const actionSchemas = {
         v.direction === "receivable"
           ? Boolean(v.intermediary_id) && !v.provider_id
           : Boolean(v.provider_id) && !v.intermediary_id,
-      "Selecciona únicamente la contraparte correspondiente.",
+      "Selecciona el endosador o proveedor correspondiente a esta cuenta.",
     )
     .refine(
       (v) => v.kind !== "charge" || v.amount > 0,

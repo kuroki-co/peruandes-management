@@ -14,7 +14,11 @@ export function Shell({
 }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
-  const available = modules.filter((m) => !access || canAccess(access, m.id));
+  const available = modules.filter(
+    (m) =>
+      !["operations", "connections", "providers"].includes(m.id) &&
+      (!access || canAccess(access, m.id)),
+  );
   const current = modules.find((m) => m.path === path);
   return (
     <div className="app-shell">
@@ -133,7 +137,7 @@ export function Shell({
           {children}
         </main>
         <footer className="workspace-footer">
-          Perú Andes <span>Reservas · Operaciones · Finanzas</span>
+          Perú Andes <span>Endosadores · Reservas · Liquidación</span>
         </footer>
       </div>
     </div>

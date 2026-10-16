@@ -89,6 +89,17 @@ assert.equal(
   (await rpc("booking_context", { p_token: token })).intermediary,
   "Hotel de prueba",
 );
+const publicContext = await rpc("booking_context", { p_token: token });
+assert.ok(
+  publicContext.services.every(
+    (s) => Object.keys(s).sort().join(",") === "id,name",
+  ),
+);
+assert.ok(
+  publicContext.extras.every(
+    (e) => Object.keys(e).sort().join(",") === "id,name",
+  ),
+);
 const request = randomUUID();
 const booking = {
   request_id: request,
@@ -572,6 +583,48 @@ const changedDeparture = await rpc("save_departure", {
 assert.equal(changedDeparture, guidedDeparture);
 console.log(
   "OK: cotizaciones verificadas, reintentos consistentes, datos mínimos de finanzas y salidas editables.",
+);
+await user(admin);
+const privatePriceToken = randomUUID().replaceAll("-", "");
+await rpc("manage_link", { p_intermediary: hotel, p_token: privatePriceToken });
+const agreedRate = (
+  await rpc("workspace_data", { p_module: "intermediaries" })
+).tariffs
+  .filter((t) => t.intermediary_id === hotel && t.service_id === service)
+  .sort((a, b) => Number(b.version) - Number(a.version))[0].amount;
+await user("", "anon");
+const privatePriceBooking = await rpc("create_public_booking", {
+  p_token: privatePriceToken,
+  p_data: {
+    request_id: randomUUID(),
+    service_id: service,
+    departure_date: "2030-02-01",
+    expected_rate: 1,
+    passengers: [
+      {
+        full_name: "Prueba tarifa privada",
+        pickup: "Hotel",
+        extras: [
+          { extra_id: snapshot.extras[0].id, quantity: 1, expected_price: 1 },
+        ],
+      },
+    ],
+  },
+});
+await user(admin);
+const privatePriceFinance = await rpc("workspace_data", {
+  p_module: "finance",
+});
+assert.equal(
+  Number(
+    privatePriceFinance.ledger.find(
+      (l) => l.booking_id === privatePriceBooking && l.origin === "tour",
+    ).amount,
+  ),
+  Number(agreedRate),
+);
+console.log(
+  "OK: formulario público sin importes; tarifas y adicionales calculados solo en servidor.",
 );
 await db.close();
 console.log(

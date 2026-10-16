@@ -36,6 +36,7 @@ export function BookingForm({
   ready,
   onSaved,
   onCancel,
+  initialDate,
 }: {
   intermediaries: Row[];
   services: Row[];
@@ -46,6 +47,7 @@ export function BookingForm({
   ready: boolean;
   onSaved?: () => void;
   onCancel?: () => void;
+  initialDate?: string;
 }) {
   const router = useRouter();
   const formId = useId();
@@ -64,7 +66,7 @@ export function BookingForm({
       request_id: crypto.randomUUID(),
       intermediary_id: "",
       service_id: "",
-      departure_date: today(),
+      departure_date: initialDate || today(),
       notes: "",
       passengers: [{ ...emptyPassenger }],
     },
@@ -103,20 +105,22 @@ export function BookingForm({
   );
   async function submit(values: BookingValues) {
     setMessage("");
-    const quoted = {
-      ...values,
-      expected_rate: tariff ? number(tariff, "amount") : undefined,
-      passengers: values.passengers.map((p) => ({
-        ...p,
-        extras: p.extras.map((e) => ({
-          ...e,
-          expected_price: number(
-            extras.find((x) => text(x, "id") === e.extra_id) ?? {},
-            "amount",
-          ),
-        })),
-      })),
-    };
+    const quoted = token
+      ? values
+      : {
+          ...values,
+          expected_rate: tariff ? number(tariff, "amount") : undefined,
+          passengers: values.passengers.map((p) => ({
+            ...p,
+            extras: p.extras.map((e) => ({
+              ...e,
+              expected_price: number(
+                extras.find((x) => text(x, "id") === e.extra_id) ?? {},
+                "amount",
+              ),
+            })),
+          })),
+        };
     const result = token
       ? await submitPublicBooking(token, quoted)
       : await performAction("booking", quoted);
@@ -191,12 +195,12 @@ export function BookingForm({
         <div className="form-grid">
           {token ? (
             <div className="form-field span-2">
-              <label>Intermediario</label>
+              <label>Endosador</label>
               <strong>{intermediaryName}</strong>
             </div>
           ) : (
             <div className="form-field">
-              <label htmlFor="booking-intermediary">Intermediario *</label>
+              <label htmlFor="booking-intermediary">Endosador *</label>
               <select
                 id="booking-intermediary"
                 {...register("intermediary_id")}
@@ -248,10 +252,11 @@ export function BookingForm({
               </small>
             )}
           </div>
-          <div className="form-field span-2">
-            <label htmlFor="booking-notes">Observaciones de la reserva</label>
+          <details className="form-field span-2 sensitive-section">
+            <summary>Observaciones generales de la reserva (opcional)</summary>
+            <label htmlFor="booking-notes">Observaciones generales</label>
             <textarea id="booking-notes" {...register("notes")} rows={2} />
-          </div>
+          </details>
         </div>
       </section>
       <section className="form-section">
@@ -391,7 +396,9 @@ export function BookingForm({
                           />
                           <span>
                             {text(extra, "name")}
-                            <small>{money(number(extra, "amount"))}</small>
+                            {!token && (
+                              <small>{money(number(extra, "amount"))}</small>
+                            )}
                           </span>
                         </label>
                         {entry && (
@@ -470,23 +477,34 @@ export function BookingForm({
               "Selecciona un servicio"}{" "}
             · {departureDate || "Selecciona una fecha"}
           </p>
-          <small>Cargo del tour al intermediario</small>
-          <strong>
-            {total === null ? "Tarifa por seleccionar" : money(total)}
-          </strong>
-          <span>
-            {fields.length} pasajero{fields.length !== 1 ? "s" : ""} · Los
-            adicionales requieren un movimiento explícito.
-          </span>
-          <p className="extra-total">
-            Adicionales solicitados: <b>{money(extrasTotal)}</b>. Este importe
-            no se carga automáticamente al intermediario.
-          </p>
-          {sid && total === null && (
-            <p className="field-error">
-              No hay una tarifa acordada para este servicio. Solicita su
-              configuración en Intermediarios → Tarifas.
-            </p>
+          {!token && (
+            <>
+              <small>Cargo del tour al endosador</small>
+              <strong>
+                {total === null ? "Tarifa por seleccionar" : money(total)}
+              </strong>
+              <span>
+                {fields.length} pasajero{fields.length !== 1 ? "s" : ""} · Los
+                adicionales requieren un movimiento explícito.
+              </span>
+              <p className="extra-total">
+                Adicionales solicitados: <b>{money(extrasTotal)}</b>. Este
+                importe no se carga automáticamente al endosador.
+              </p>
+              {sid && total === null && (
+                <p className="field-error">
+                  No hay una tarifa acordada para este servicio. Solicita su
+                  configuración en Endosadores → Tarifas.
+                </p>
+              )}
+            </>
+          )}
+          {token && (
+            <span>
+              {fields.length} {fields.length === 1 ? "pasajero" : "pasajeros"}.
+              Revisa la fecha, los datos de recojo y los adicionales solicitados
+              antes de registrar.
+            </span>
           )}
         </div>
       </div>

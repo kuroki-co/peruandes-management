@@ -270,7 +270,7 @@ export async function submitPublicBooking(
     return { ok: false, message: parsed.error.issues[0].message };
   try {
     const env = requireSupabaseEnv();
-    // Cliente sin sesión: el token limita el alta a su intermediario.
+    // Cliente sin sesión: el token limita el alta a su endosador.
     const db = createStatelessClient(env.url, env.publishableKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });

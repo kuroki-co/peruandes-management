@@ -12,7 +12,7 @@ export const moduleGuidance: Record<
   intermediaries: {
     title: "Prepara el acceso de cada hotel o agencia",
     description:
-      "1. Registra el intermediario. 2. Acuerda sus tarifas. 3. Crea y comparte su enlace exclusivo.",
+      "1. Registra el endosador. 2. Acuerda sus tarifas. 3. Crea y comparte su enlace exclusivo.",
   },
   bookings: {
     title: "Una reserva conecta ventas, operación y cobros",
@@ -35,14 +35,14 @@ export const moduleGuidance: Record<
       "Registra al proveedor y el servicio derivado por pasajero. El importe acordado genera una cuenta por pagar independiente.",
   },
   finance: {
-    title: "Primero elige qué cuenta revisar",
+    title: "Revisa cuánto falta cobrar",
     description:
-      "Separa cuentas por cobrar y por pagar. Registra abonos o adelantos y aplica los créditos manualmente a los cargos correspondientes.",
+      "Elige un endosador para ver su deuda, registrar un pago o adelanto y consultar el detalle de lo cobrado.",
   },
   settings: {
     title: "Mantén el catálogo del equipo",
     description:
-      "Configura servicios turísticos y adicionales. Las tarifas de cada hotel se gestionan en Intermediarios; los precios históricos se conservan.",
+      "Configura servicios turísticos y adicionales. Las tarifas de cada hotel se gestionan en Endosadores; los precios históricos se conservan.",
   },
   staff: {
     title: "Da a cada vendedora el acceso que necesita",
@@ -53,7 +53,7 @@ export const moduleGuidance: Record<
 
 export const tabGuidance: Record<string, string> = {
   tariffs:
-    "Cada tarifa pertenece a un intermediario y un tour. La última versión se utiliza en nuevas reservas; los importes históricos se conservan.",
+    "Cada tarifa pertenece a un endosador y un tour. La última versión se utiliza en nuevas reservas; los importes históricos se conservan.",
   links:
     "Comparte el enlace solo con su hotel o agencia. Revocarlo bloquea nuevos envíos y conserva las reservas existentes.",
   history:
@@ -76,11 +76,11 @@ export const tabGuidance: Record<string, string> = {
   outsourcings:
     "Registra el proveedor, pasajero y costo acordado. Marca la cobertura de movilidad únicamente si ese servicio la reemplaza.",
   balances:
-    "El saldo neto resume la cuenta; los créditos disponibles todavía necesitan aplicarse a cargos concretos.",
+    "Deuda pendiente es lo que falta cobrar. Si el endosador pagó de más, el importe aparece como saldo a favor.",
   ledger:
     "Los movimientos conservan la trazabilidad. Una cancelación o NO SHOW no crea una penalidad automática.",
   applications:
-    "Asocia un crédito disponible a un cargo de la misma cuenta, sin superar sus importes pendientes.",
+    "Elige un pago o adelanto ya registrado e indica qué deuda cubre. Esto no registra un cobro nuevo ni descuenta el dinero dos veces.",
   settlement:
     "Elige una cuenta y un período para revisar saldo anterior, cargos, abonos y saldo final. Exporta o imprime el resultado.",
   audit:

@@ -53,10 +53,19 @@ export function RecordForm({
     kind in catalogSchemas
       ? catalogSchemas[kind as keyof typeof catalogSchemas]
       : actionSchemas[kind as keyof typeof actionSchemas];
+  const normalize = (values: Row): Row =>
+    kind === "movement"
+      ? {
+          ...values,
+          intermediary_id:
+            values.direction === "receivable" ? values.intermediary_id : "",
+          provider_id: values.direction === "payable" ? values.provider_id : "",
+        }
+      : values;
   const schema = z
     .record(z.string(), z.unknown())
     .superRefine((values, ctx) => {
-      const parsed = source.safeParse(values);
+      const parsed = source.safeParse(normalize(values));
       if (!parsed.success)
         for (const issue of parsed.error.issues)
           ctx.addIssue({
@@ -92,7 +101,7 @@ export function RecordForm({
   async function submit(values: Row) {
     setMessage("");
     setSuccess(false);
-    const result = await performAction(kind, values);
+    const result = await performAction(kind, normalize(values));
     setMessage(result.message);
     setSuccess(result.ok);
     if (result.ok) onSaved?.();
@@ -110,113 +119,136 @@ export function RecordForm({
     >
       <p className="form-instructions">Los campos con * son obligatorios.</p>
       <div className="form-grid">
-        {fields.map((field) => {
-          const fid = `${kind}-${field.key}`;
-          const error = errors[field.key]?.message;
-          const value = values[field.key];
-          return (
-            <div
-              key={field.key}
-              className={`form-field ${field.wide ? "span-2" : ""}`}
-            >
-              {field.type !== "checkbox" && (
-                <label htmlFor={fid}>
-                  {field.label}
-                  {field.required && <span className="required"> *</span>}
-                </label>
-              )}
-              {field.type === "select" ? (
-                <select
-                  id={fid}
-                  {...register(field.key)}
-                  aria-invalid={Boolean(error)}
-                  aria-describedby={
-                    [error && `${fid}-error`, field.hint && `${fid}-hint`]
-                      .filter(Boolean)
-                      .join(" ") || undefined
-                  }
-                >
-                  <option value="">Seleccionar…</option>
-                  {field.options?.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              ) : field.type === "textarea" ? (
-                <textarea
-                  id={fid}
-                  {...register(field.key)}
-                  rows={3}
-                  aria-invalid={Boolean(error)}
-                  aria-describedby={error ? `${fid}-error` : undefined}
-                />
-              ) : field.type === "checkbox" ? (
-                <label className="checkbox-label">
+        {fields
+          .filter((field) => {
+            if (kind !== "movement") return true;
+            if (field.key === "provider_id")
+              return values.direction === "payable";
+            if (field.key === "intermediary_id")
+              return values.direction === "receivable";
+            if (field.key === "booking_id" && !field.options?.length)
+              return false;
+            return true;
+          })
+          .map((field) => {
+            const fid = `${kind}-${field.key}`;
+            const error = errors[field.key]?.message;
+            const value = values[field.key];
+            return (
+              <div
+                key={field.key}
+                className={`form-field ${field.wide ? "span-2" : ""}`}
+              >
+                {field.type !== "checkbox" && (
+                  <label htmlFor={fid}>
+                    {field.label}
+                    {field.required && <span className="required"> *</span>}
+                  </label>
+                )}
+                {field.type === "select" ? (
+                  <select
+                    id={fid}
+                    {...register(field.key)}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={
+                      [error && `${fid}-error`, field.hint && `${fid}-hint`]
+                        .filter(Boolean)
+                        .join(" ") || undefined
+                    }
+                  >
+                    <option value="">Seleccionar…</option>
+                    {field.options?.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : field.type === "textarea" ? (
+                  <textarea
+                    id={fid}
+                    {...register(field.key)}
+                    rows={3}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? `${fid}-error` : undefined}
+                  />
+                ) : field.type === "checkbox" ? (
+                  <label className="checkbox-label">
+                    <input
+                      id={fid}
+                      type="checkbox"
+                      {...register(field.key)}
+                      aria-describedby={field.hint ? `${fid}-hint` : undefined}
+                    />
+                    {field.label}
+                  </label>
+                ) : field.type === "permissions" ? (
+                  <fieldset className="permissions">
+                    <legend className="sr-only">Permisos por módulo</legend>
+                    {field.options?.map((o) => (
+                      <label key={o.value} className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={
+                            !Array.isArray(value) || !value.includes(o.value)
+                          }
+                          onChange={(e) => {
+                            const list = Array.isArray(value)
+                              ? value.filter(
+                                  (v): v is string => typeof v === "string",
+                                )
+                              : [];
+                            setValue(
+                              field.key,
+                              e.target.checked
+                                ? list.filter((v) => v !== o.value)
+                                : [...list, o.value],
+                            );
+                          }}
+                        />
+                        {o.label}
+                      </label>
+                    ))}
+                  </fieldset>
+                ) : (
                   <input
                     id={fid}
-                    type="checkbox"
+                    type={field.type ?? "text"}
                     {...register(field.key)}
-                    aria-describedby={field.hint ? `${fid}-hint` : undefined}
+                    step={field.type === "number" ? "0.01" : undefined}
+                    autoComplete={
+                      field.type === "password" ? "new-password" : "off"
+                    }
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? `${fid}-error` : undefined}
                   />
-                  {field.label}
-                </label>
-              ) : field.type === "permissions" ? (
-                <fieldset className="permissions">
-                  <legend className="sr-only">Permisos por módulo</legend>
-                  {field.options?.map((o) => (
-                    <label key={o.value} className="checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={
-                          !Array.isArray(value) || !value.includes(o.value)
-                        }
-                        onChange={(e) => {
-                          const list = Array.isArray(value)
-                            ? value.filter(
-                                (v): v is string => typeof v === "string",
-                              )
-                            : [];
-                          setValue(
-                            field.key,
-                            e.target.checked
-                              ? list.filter((v) => v !== o.value)
-                              : [...list, o.value],
-                          );
-                        }}
-                      />
-                      {o.label}
-                    </label>
-                  ))}
-                </fieldset>
-              ) : (
-                <input
-                  id={fid}
-                  type={field.type ?? "text"}
-                  {...register(field.key)}
-                  step={field.type === "number" ? "0.01" : undefined}
-                  autoComplete={
-                    field.type === "password" ? "new-password" : "off"
-                  }
-                  aria-invalid={Boolean(error)}
-                  aria-describedby={error ? `${fid}-error` : undefined}
-                />
-              )}
-              {field.hint && <small id={`${fid}-hint`}>{field.hint}</small>}
-              {field.type === "select" && !field.options?.length && (
-                <small className="field-error">
-                  No hay opciones disponibles. Registra primero la información
-                  relacionada.
-                </small>
-              )}
-              {error && (
-                <small id={`${fid}-error`} role="alert" className="field-error">
-                  {String(error)}
-                </small>
-              )}
-            </div>
-          );
-        })}
+                )}
+                {field.hint && (
+                  <small id={`${fid}-hint`}>
+                    {kind === "movement" && field.key === "amount"
+                      ? values.kind === "adjustment"
+                        ? "Positivo: aumenta la deuda. Negativo: reduce la deuda. Indica el motivo de la corrección."
+                        : "Ingresa el monto sin signo negativo. El sistema registra el cargo o abono según el tipo elegido."
+                      : field.hint}
+                  </small>
+                )}
+                {field.type === "select" && !field.options?.length && (
+                  <small className="field-error">
+                    No hay opciones disponibles. Registra primero la información
+                    relacionada.
+                  </small>
+                )}
+                {error && (
+                  <small
+                    id={`${fid}-error`}
+                    role="alert"
+                    className="field-error"
+                  >
+                    {String(error)}
+                  </small>
+                )}
+              </div>
+            );
+          })}
       </div>
       <footer className="form-footer">
         <span

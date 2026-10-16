@@ -11,7 +11,7 @@ export const modules = [
   {
     id: "intermediaries",
     path: "/intermediarios",
-    name: "Intermediarios",
+    name: "Endosadores",
     description: "Hoteles, agencias y acuerdos comerciales.",
     icon: "▦",
   },
@@ -46,8 +46,8 @@ export const modules = [
   {
     id: "finance",
     path: "/finanzas",
-    name: "Finanzas",
-    description: "Cuentas corrientes, abonos, adelantos y liquidaciones.",
+    name: "Liquidación",
+    description: "Deuda por endosador, abonos, adelantos y liquidaciones.",
     icon: "▣",
   },
   {
@@ -127,7 +127,7 @@ export const labels: Record<string, string> = {
   adjustment: "Ajuste",
   unconfirmed: "Por confirmar",
   peru_andes: "Perú Andes",
-  intermediary: "Intermediario",
+  intermediary: "Endosador",
   third_party: "Tercero",
   shared: "Compartida",
   single: "Simple",

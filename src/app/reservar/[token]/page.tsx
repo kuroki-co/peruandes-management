@@ -14,8 +14,8 @@ export const metadata = {
 };
 const contextSchema = z.object({
   intermediary: z.string(),
-  services: z.array(z.record(z.string(), z.unknown())),
-  extras: z.array(z.record(z.string(), z.unknown())),
+  services: z.array(z.object({ id: z.string(), name: z.string() })),
+  extras: z.array(z.object({ id: z.string(), name: z.string() })),
 });
 async function PublicForm({
   params,

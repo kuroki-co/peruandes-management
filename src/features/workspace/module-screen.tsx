@@ -12,6 +12,7 @@ import { bookingLinkPath } from "./booking-link";
 import { moduleGuidance, tabGuidance } from "./experience";
 import { LoadingButton } from "@/components/ui/loading";
 import { TableAction, TableActionLink } from "@/components/ui/table-action";
+import { BookingCalendar } from "./booking-calendar";
 import { performAction } from "./actions";
 import {
   modules,
@@ -95,7 +96,6 @@ function Stat({
   label,
   value,
   hint,
-  icon,
 }: {
   label: string;
   value: string | number;
@@ -103,16 +103,19 @@ function Stat({
   icon?: string;
 }) {
   return (
-    <article className="stat-card">
-      <div className="stat-top">
-        <span>{label}</span>
-        <span aria-hidden="true" className="stat-icon">
-          {icon ?? "◫"}
-        </span>
-      </div>
+    <div
+      className="inline-metric"
+      title={hint}
+      style={{
+        display: "inline-flex",
+        alignItems: "baseline",
+        gap: 9,
+        fontSize: 12,
+      }}
+    >
+      <span>{label}</span>
       <strong>{value}</strong>
-      <small>{hint}</small>
-    </article>
+    </div>
   );
 }
 
@@ -129,6 +132,17 @@ export function ModuleScreen({
 }) {
   const config = modules.find((m) => m.id === module)!;
   const [tab, setTab] = useState("");
+  const [passengerDate, setPassengerDate] = useState(today());
+  const [calendarOpen, setCalendarOpen] = useState(true);
+  function changePassengerDay(delta: number) {
+    const date = new Date(`${passengerDate}T12:00:00`);
+    date.setDate(date.getDate() + delta);
+    setPassengerDate(
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+    );
+    setCalendarOpen(false);
+  }
+
   const [editor, setEditor] = useState<Editor | null>(null);
   const [notice, setNotice] = useState("");
   const [noticeError, setNoticeError] = useState(false);
@@ -313,27 +327,36 @@ export function ModuleScreen({
     notesField,
   ];
   const movementFields = [
-    f("direction", "Cuenta", "select", choices("receivable", "payable"), true),
     f(
-      "intermediary_id",
-      "Intermediario (cuentas por cobrar)",
+      "direction",
+      "¿Qué cuenta deseas registrar?",
       "select",
-      allIntermediaries,
+      [
+        { value: "receivable", label: "Cobro a un endosador" },
+        { value: "payable", label: "Pago a un proveedor" },
+      ],
+      true,
     ),
-    f("provider_id", "Proveedor (cuentas por pagar)", "select", allProviders),
+    f("intermediary_id", "Endosador", "select", allIntermediaries),
+    f("provider_id", "Proveedor", "select", allProviders),
     f(
       "kind",
-      "Tipo de movimiento",
+      "¿Qué deseas registrar?",
       "select",
-      choices("charge", "payment", "advance", "adjustment"),
+      [
+        { value: "payment", label: "Pago / abono" },
+        { value: "advance", label: "Adelanto" },
+        { value: "charge", label: "Cargo adicional" },
+        { value: "adjustment", label: "Corrección de importe" },
+      ],
       true,
     ),
     {
       ...f("amount", "Importe en soles", "number", undefined, true),
       hint: "Pagos y adelantos se registran como abonos. En ajustes, usa el signo correspondiente.",
     },
-    f("effective_date", "Fecha del movimiento", "date", undefined, true),
-    f("concept", "Concepto / motivo", "text", undefined, true),
+    f("effective_date", "Fecha del pago o cargo", "date", undefined, true),
+    f("concept", "Motivo", "text", undefined, true),
     f("reference", "Referencia del pago o comprobante"),
     f(
       "booking_id",
@@ -398,7 +421,7 @@ export function ModuleScreen({
       await navigator.clipboard.writeText(
         `${location.origin}${bookingLinkPath(intermediaryName(text(row, "intermediary_id")), text(row, "token"))}`,
       );
-      setNotice("Enlace copiado. Compártelo únicamente con su intermediario.");
+      setNotice("Enlace copiado. Compártelo únicamente con su endosador.");
       setNoticeError(false);
     } catch {
       setNoticeError(true);
@@ -420,7 +443,6 @@ export function ModuleScreen({
   if (module === "bookings")
     tabs = [
       { id: "bookings", name: "Reservas" },
-      { id: "passengers", name: "Pasajeros" },
       { id: "corrections", name: "Correcciones comerciales" },
     ];
   if (module === "operations")
@@ -439,9 +461,9 @@ export function ModuleScreen({
     ];
   if (module === "finance")
     tabs = [
-      { id: "balances", name: "Cuentas corrientes" },
-      { id: "ledger", name: "Movimientos" },
-      { id: "applications", name: "Aplicaciones de créditos" },
+      { id: "balances", name: "Deuda por endosador" },
+      { id: "ledger", name: "Cargos y pagos" },
+      { id: "applications", name: "Asignar pagos a deudas" },
       { id: "settlement", name: "Liquidación" },
     ];
   if (module === "staff")
@@ -463,13 +485,13 @@ export function ModuleScreen({
         ? "Nueva tarifa"
         : selected === "links"
           ? "Crear enlace"
-          : "Nuevo intermediario";
+          : "Nuevo endosador";
     primary = () =>
       selected === "tariffs"
         ? open("Tarifa personalizada", "tariff", [
             f(
               "intermediary_id",
-              "Intermediario",
+              "Endosador",
               "select",
               intermediaryOptions,
               true,
@@ -493,19 +515,22 @@ export function ModuleScreen({
           ? open("Crear enlace exclusivo", "link", [
               f(
                 "intermediary_id",
-                "Intermediario",
+                "Endosador",
                 "select",
                 intermediaryOptions,
                 true,
               ),
             ])
-          : open("Nuevo intermediario", "intermediaries", intermediaryFields, {
+          : open("Nuevo endosador", "intermediaries", intermediaryFields, {
               kind: "hotel",
             });
   }
   if (module === "bookings") {
     primaryLabel = "Nueva reserva";
-    primary = () => open("Registrar reserva", "newBooking", []);
+    primary = () =>
+      open("Registrar reserva", "newBooking", [], {
+        departure_date: passengerDate,
+      });
   }
   if (module === "operations") {
     primaryLabel =
@@ -601,9 +626,9 @@ export function ModuleScreen({
         : open("Nuevo proveedor", "providers", providerFields);
   }
   if (module === "finance") {
-    primaryLabel = "Registrar movimiento";
+    primaryLabel = "Registrar pago o cargo";
     primary = () =>
-      open("Movimiento financiero", "movement", movementFields, {
+      open("Registrar pago o cargo", "movement", movementFields, {
         direction,
         effective_date: today(),
         kind: "payment",
@@ -702,13 +727,13 @@ export function ModuleScreen({
         </select>
       </div>
       <div className="form-field">
-        <label htmlFor="filter-intermediary">Intermediario</label>
+        <label htmlFor="filter-intermediary">Endosador</label>
         <select
           id="filter-intermediary"
           value={intermediaryFilter}
           onChange={(e) => setIntermediaryFilter(e.target.value)}
         >
-          <option value="">Todos los intermediarios</option>
+          <option value="">Todos los endosadores</option>
           {intermediaryOptions.map((o) => (
             <option value={o.value} key={o.value}>
               {o.label}
@@ -743,12 +768,7 @@ export function ModuleScreen({
       ],
       action: (
         <>
-          {edit(
-            "Editar intermediario",
-            "intermediaries",
-            intermediaryFields,
-            r,
-          )}
+          {edit("Editar endosador", "intermediaries", intermediaryFields, r)}
           <TableAction
             icon="history"
             onClick={() => {
@@ -765,7 +785,7 @@ export function ModuleScreen({
   }
   if (module === "intermediaries" && selected === "tariffs") {
     headers = [
-      "Intermediario",
+      "Endosador",
       "Servicio",
       "Tarifa por pasajero",
       "Versión",
@@ -785,7 +805,7 @@ export function ModuleScreen({
       }));
   }
   if (module === "intermediaries" && selected === "links") {
-    headers = ["Intermediario", "Creado el", "Estado"];
+    headers = ["Endosador", "Creado el", "Estado"];
     rows = list("booking_links").map((r) => ({
       id: text(r, "id"),
       cells: [
@@ -835,7 +855,7 @@ export function ModuleScreen({
       "Reserva",
       "Salida",
       "Servicio",
-      "Intermediario",
+      "Endosador",
       "Pasajeros",
       "Tarifa histórica",
       "Estado",
@@ -903,7 +923,7 @@ export function ModuleScreen({
                         undefined,
                         true,
                       ),
-                      hint: "La diferencia respecto de la tarifa anterior genera un ajuste trazable. Requiere permisos de Reservas y Finanzas.",
+                      hint: "La diferencia respecto de la tarifa anterior genera un ajuste trazable. Requiere permisos de Reservas y Liquidación.",
                     },
                     f("reason", "Motivo del ajuste", "text", undefined, true),
                   ],
@@ -951,83 +971,107 @@ export function ModuleScreen({
       };
     });
   }
-  if (module === "bookings" && selected === "passengers") {
+  if (module === "bookings" && selected === "bookings") {
     headers = [
       "Pasajero",
       "Salida",
       "Servicio",
-      "Intermediario",
+      "Endosador",
       "Teléfono",
       "Recojo",
       "Hora de recojo",
       "Adicionales",
       "Asistencia",
+      "Observaciones",
     ];
-    rows = filteredPassengers.map((p) => {
-      const b = bookingById(text(p, "booking_id"));
-      const health =
-        list("passenger_health").find(
-          (h) => text(h, "passenger_id") === text(p, "id"),
-        ) ?? {};
-      return {
-        id: text(p, "id"),
-        cells: [
-          text(p, "full_name"),
-          text(b, "departure_date"),
-          serviceName(text(b, "service_id")),
-          intermediaryName(text(b, "intermediary_id")),
-          text(p, "phone"),
-          text(p, "pickup"),
-          text(p, "pickup_time").slice(0, 5) || "Por coordinar",
-          list("passenger_extras")
-            .filter((e) => text(e, "passenger_id") === text(p, "id"))
-            .map(
-              (e) =>
-                `${text(e, "quantity")} × ${text(e, "name")} (subtotal ${money(number(e, "unit_price") * number(e, "quantity"))})`,
-            )
-            .join("; "),
-          labels[text(p, "attendance")],
-        ],
-        action: (
-          <>
-            {edit("Corregir datos del pasajero", "passenger", passengerFields, {
-              ...p,
-              ...health,
-              pickup_time: text(p, "pickup_time").slice(0, 5),
-              id: p.id,
-            })}
-            <TableAction
-              icon="extras"
-              onClick={() =>
-                open(
-                  "Adicionales del pasajero",
-                  "passengerExtra",
-                  [
-                    f(
-                      "extra_id",
-                      "Concepto adicional",
-                      "select",
-                      list("extra_options").map((e) => ({
-                        value: text(e, "id"),
-                        label: text(e, "name"),
-                      })),
-                      true,
-                    ),
-                    {
-                      ...f("quantity", "Cantidad", "number", undefined, true),
-                      hint: "Usa cero para retirar el concepto. Al cambiar la cantidad se conserva el precio histórico.",
-                    },
-                  ],
-                  { passenger_id: p.id, quantity: 1 },
-                )
-              }
-            >
-              Adicionales
-            </TableAction>
-          </>
+    rows = list("passengers")
+      .filter((p) => {
+        const b = bookingById(text(p, "booking_id"));
+        return (
+          text(b, "departure_date") === passengerDate &&
+          text(b, "status") !== "cancelled" &&
+          text(p, "attendance") !== "cancelled" &&
+          (!serviceFilter || text(b, "service_id") === serviceFilter) &&
+          (!intermediaryFilter ||
+            text(b, "intermediary_id") === intermediaryFilter)
+        );
+      })
+      .sort((a, b) =>
+        (text(a, "pickup_time") || "99:99").localeCompare(
+          text(b, "pickup_time") || "99:99",
         ),
-      };
-    });
+      )
+      .map((p) => {
+        const b = bookingById(text(p, "booking_id"));
+        const health =
+          list("passenger_health").find(
+            (h) => text(h, "passenger_id") === text(p, "id"),
+          ) ?? {};
+        return {
+          id: text(p, "id"),
+          cells: [
+            text(p, "full_name"),
+            text(b, "departure_date"),
+            serviceName(text(b, "service_id")),
+            intermediaryName(text(b, "intermediary_id")),
+            text(p, "phone"),
+            text(p, "pickup"),
+            text(p, "pickup_time").slice(0, 5) || "Por coordinar",
+            list("passenger_extras")
+              .filter((e) => text(e, "passenger_id") === text(p, "id"))
+              .map(
+                (e) =>
+                  `${text(e, "quantity")} × ${text(e, "name")} (subtotal ${money(number(e, "unit_price") * number(e, "quantity"))})`,
+              )
+              .join("; "),
+            labels[text(p, "attendance")],
+            text(p, "notes"),
+          ],
+          action: (
+            <>
+              {edit(
+                "Corregir datos del pasajero",
+                "passenger",
+                passengerFields,
+                {
+                  ...p,
+                  ...health,
+                  pickup_time: text(p, "pickup_time").slice(0, 5),
+                  id: p.id,
+                },
+              )}
+              <TableAction
+                icon="extras"
+                onClick={() =>
+                  open(
+                    "Adicionales del pasajero",
+                    "passengerExtra",
+                    [
+                      f(
+                        "extra_id",
+                        "Concepto adicional",
+                        "select",
+                        list("extra_options").map((e) => ({
+                          value: text(e, "id"),
+                          label: text(e, "name"),
+                        })),
+                        true,
+                      ),
+                      {
+                        ...f("quantity", "Cantidad", "number", undefined, true),
+                        hint: "Usa cero para retirar el concepto. Al cambiar la cantidad se conserva el precio histórico.",
+                      },
+                    ],
+                    { passenger_id: p.id, quantity: 1 },
+                  )
+                }
+              >
+                Adicionales
+              </TableAction>
+            </>
+          ),
+        };
+      });
   }
   if (module === "operations" && selected === "vehicles") {
     headers = ["Movilidad", "Placa", "Capacidad", "Estado"];
@@ -1103,7 +1147,7 @@ export function ModuleScreen({
       "Salida",
       "Pasajero",
       "Servicio",
-      "Intermediario",
+      "Endosador",
       "Teléfono",
       "Recojo",
       "Hora de recojo",
@@ -1467,12 +1511,11 @@ export function ModuleScreen({
   }
   if (module === "finance" && selected === "balances") {
     headers = [
-      direction === "receivable" ? "Intermediario" : "Proveedor",
-      "Cargos y ajustes",
-      "Abonos y ajustes a favor",
-      "Cargos sin aplicar",
-      "Créditos disponibles",
-      "Saldo neto",
+      direction === "receivable" ? "Endosador" : "Proveedor",
+      "Cargos acumulados",
+      "Pagos y ajustes a favor",
+      "Deuda pendiente",
+      "Saldo a favor",
       "Situación",
     ];
     const parties =
@@ -1497,34 +1540,8 @@ export function ModuleScreen({
             text(p, "name"),
             money(sum(records.filter((r) => number(r, "amount") > 0))),
             money(-sum(records.filter((r) => number(r, "amount") < 0))),
-            money(
-              records
-                .filter((r) => number(r, "amount") > 0)
-                .reduce(
-                  (s, r) =>
-                    s +
-                    Math.max(
-                      0,
-                      number(r, "amount") - applied(text(r, "id"), "charge_id"),
-                    ),
-                  0,
-                ),
-            ),
-            money(
-              records
-                .filter((r) => number(r, "amount") < 0)
-                .reduce(
-                  (s, r) =>
-                    s +
-                    Math.max(
-                      0,
-                      -number(r, "amount") -
-                        applied(text(r, "id"), "credit_id"),
-                    ),
-                  0,
-                ),
-            ),
-            money(Math.abs(balance)),
+            money(Math.max(0, balance)),
+            money(Math.max(0, -balance)),
             balance > 0
               ? "Pendiente"
               : balance < 0
@@ -1579,7 +1596,12 @@ export function ModuleScreen({
       });
   }
   if (module === "finance" && selected === "applications") {
-    headers = ["Crédito aplicado", "Cargo", "Importe", "Fecha"];
+    headers = [
+      "Pago o adelanto utilizado",
+      "Deuda cubierta",
+      "Importe asignado",
+      "Fecha",
+    ];
     rows = list("applications")
       .filter((a) =>
         accountLedger.some((r) => text(r, "id") === text(a, "credit_id")),
@@ -1623,7 +1645,7 @@ export function ModuleScreen({
   );
   const secondaryMetric = {
     intermediaries: {
-      label: "Intermediarios activos",
+      label: "Endosadores activos",
       value: list("intermediaries").filter((r) => r.active === true).length,
       hint: "Habilitados para nuevas reservas",
     },
@@ -1746,7 +1768,7 @@ export function ModuleScreen({
               />
             </label>
           </div>
-          <div className="stats-grid operational-stats">
+          <div className="metric-summary stats-grid operational-stats">
             <Stat
               label="Reservas con salida"
               value={metricValue(dateBookings.length)}
@@ -1929,14 +1951,14 @@ export function ModuleScreen({
                   </p>
                 </div>
                 <Link className="text-button" href="/finanzas">
-                  Ver finanzas ↗
+                  Ver liquidación ↗
                 </Link>
               </div>
-              <div className="stats-grid">
+              <div className="metric-summary stats-grid">
                 <Stat
                   label="Cuentas por cobrar"
                   value={metricValue(money(pending("receivable")))}
-                  hint="Saldos pendientes por intermediario"
+                  hint="Saldos pendientes por endosador"
                 />
                 <Stat
                   label="Pagos en la fecha"
@@ -1985,27 +2007,49 @@ export function ModuleScreen({
         </>
       ) : (
         <>
-          <div className="stats-grid compact-stats">
-            <Stat
-              label={
+          {module === "intermediaries" || module === "bookings" ? (
+            <div
+              className="directory-summary no-print"
+              hidden={module === "bookings" && selected === "bookings"}
+              aria-label={
                 module === "bookings"
-                  ? "Reservas en la selección"
-                  : "Registros del listado"
+                  ? "Resumen de reservas"
+                  : "Resumen de endosadores"
               }
-              value={metricValue(rows.length)}
-              hint="Según filtros actuales"
-            />
-            <Stat
-              label={secondaryMetric.label}
-              value={metricValue(secondaryMetric.value)}
-              hint={secondaryMetric.hint}
-            />
-            <Stat
-              label="Trazabilidad"
-              value={ready ? "Activa" : "Pendiente"}
-              hint="Cambios y movimientos conservados"
-            />
-          </div>
+            >
+              <span>
+                {module === "bookings" && selected === "bookings"
+                  ? "Reservas en la selección"
+                  : "Registros del listado"}{" "}
+                <strong>{metricValue(rows.length)}</strong>
+              </span>
+              <span>
+                {secondaryMetric.label}{" "}
+                <strong>{metricValue(secondaryMetric.value)}</strong>
+              </span>
+              <span className="directory-trace">
+                Trazabilidad <strong>{ready ? "Activa" : "Pendiente"}</strong>
+              </span>
+            </div>
+          ) : (
+            <div className="metric-summary stats-grid compact-stats">
+              <Stat
+                label="Registros del listado"
+                value={metricValue(rows.length)}
+                hint="Según filtros actuales"
+              />
+              <Stat
+                label={secondaryMetric.label}
+                value={metricValue(secondaryMetric.value)}
+                hint={secondaryMetric.hint}
+              />
+              <Stat
+                label="Trazabilidad"
+                value={ready ? "Activa" : "Pendiente"}
+                hint="Cambios y movimientos conservados"
+              />
+            </div>
+          )}
           {tabs.length > 0 && (
             <div
               className="tabs no-print"
@@ -2047,7 +2091,39 @@ export function ModuleScreen({
           {tabGuidance[selected] && (
             <p className="tab-guidance">{tabGuidance[selected]}</p>
           )}
-          {(module === "bookings" ||
+          {module === "bookings" && selected === "bookings" && (
+            <div className="filter-panel no-print">
+              <label className="form-field">
+                Servicio
+                <select
+                  value={serviceFilter}
+                  onChange={(e) => setServiceFilter(e.target.value)}
+                >
+                  <option value="">Todos los servicios</option>
+                  {serviceOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="form-field">
+                Endosador
+                <select
+                  value={intermediaryFilter}
+                  onChange={(e) => setIntermediaryFilter(e.target.value)}
+                >
+                  <option value="">Todos los endosadores</option>
+                  {intermediaryOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+          {((module === "bookings" && !(selected === "bookings")) ||
             module === "connections" ||
             (module === "intermediaries" && selected === "history") ||
             (module === "operations" &&
@@ -2072,7 +2148,7 @@ export function ModuleScreen({
                 </div>
                 <div className="form-field">
                   <label htmlFor="party">
-                    {direction === "receivable" ? "Intermediario" : "Proveedor"}
+                    {direction === "receivable" ? "Endosador" : "Proveedor"}
                   </label>
                   <select
                     id="party"
@@ -2120,7 +2196,7 @@ export function ModuleScreen({
                   <h2>
                     Liquidación{" "}
                     {direction === "receivable"
-                      ? "de intermediarios"
+                      ? "de endosadores"
                       : "de proveedores"}
                   </h2>
                   <p>
@@ -2188,10 +2264,10 @@ export function ModuleScreen({
                   <button
                     className="btn"
                     onClick={() =>
-                      open("Aplicar crédito", "application", [
+                      open("Asignar pago a deuda", "application", [
                         f(
                           "credit_id",
-                          "Crédito o ajuste disponible",
+                          "Pago o adelanto disponible",
                           "select",
                           accountLedger
                             .filter(
@@ -2212,7 +2288,7 @@ export function ModuleScreen({
                         ),
                         f(
                           "charge_id",
-                          "Cargo pendiente",
+                          "Deuda que deseas cubrir",
                           "select",
                           accountLedger
                             .filter(
@@ -2238,7 +2314,7 @@ export function ModuleScreen({
                       ])
                     }
                   >
-                    Aplicar crédito
+                    Asignar pago a deuda
                   </button>
                 </div>
               )}
@@ -2299,35 +2375,155 @@ export function ModuleScreen({
             aria-labelledby={tabs.length ? `tab-${selected}` : undefined}
             tabIndex={0}
           >
-            <DataTable
-              searchable={selected !== "settlement"}
-              key={`${module}-${selected}`}
-              headers={headers}
-              rows={rows}
-              exportName={`peruandes-${module}-${selected}`}
-              emptyDescription={
-                ready
-                  ? (tabGuidance[selected] ??
-                    moduleGuidance[module].description)
-                  : "Completa la conexión para consultar y registrar información."
-              }
-              emptyAction={
-                primaryLabel &&
-                ready &&
-                !["history", "audit", "corrections", "settlement"].includes(
-                  selected,
-                ) ? (
-                  <button className="btn primary" onClick={primary}>
-                    ＋ {primaryLabel}
-                  </button>
-                ) : undefined
-              }
-              empty={
-                ready
-                  ? "Todavía no hay registros"
-                  : "La información aparecerá al conectar Supabase"
-              }
-            />
+            {module === "bookings" && selected === "bookings" ? (
+              <>
+                {!calendarOpen && (
+                  <div className="passenger-day-toolbar">
+                    <div>
+                      <span className="eyebrow">
+                        PASAJEROS POR FECHA DE SALIDA
+                      </span>
+                      <h2>
+                        {new Intl.DateTimeFormat("es-PE", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        }).format(new Date(`${passengerDate}T12:00:00`))}
+                      </h2>
+                      <p className="muted">
+                        {rows.length}{" "}
+                        {rows.length === 1
+                          ? "pasajero programado"
+                          : "pasajeros programados"}
+                      </p>
+                    </div>
+                    <div className="form-actions">
+                      <button
+                        className="btn"
+                        aria-label="Día anterior"
+                        onClick={() => changePassengerDay(-1)}
+                      >
+                        ←
+                      </button>
+                      <button
+                        className="btn"
+                        onClick={() => {
+                          setPassengerDate(today());
+                          setCalendarOpen(false);
+                        }}
+                      >
+                        Hoy
+                      </button>
+                      <button
+                        className="btn"
+                        aria-label="Día siguiente"
+                        onClick={() => changePassengerDay(1)}
+                      >
+                        →
+                      </button>
+                      <button
+                        className={`btn ${calendarOpen ? "primary" : ""}`}
+                        aria-expanded={calendarOpen}
+                        aria-controls="booking-date-picker"
+                        onClick={() => setCalendarOpen(!calendarOpen)}
+                      >
+                        Desplegar calendario ▾
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div
+                  id="booking-date-picker"
+                  className={`calendar-collapse ${calendarOpen ? "is-expanded" : ""}`}
+                  inert={!calendarOpen}
+                  aria-hidden={!calendarOpen}
+                >
+                  <div className="calendar-collapse-inner">
+                    <BookingCalendar
+                      key={passengerDate}
+                      initialDate={passengerDate}
+                      bookings={list("bookings").filter(
+                        (b) =>
+                          (!serviceFilter ||
+                            text(b, "service_id") === serviceFilter) &&
+                          (!intermediaryFilter ||
+                            text(b, "intermediary_id") === intermediaryFilter),
+                      )}
+                      passengers={list("passengers")}
+                      services={list("service_options")}
+                      onCreate={(date) =>
+                        open("Registrar reserva", "newBooking", [], {
+                          departure_date: date,
+                        })
+                      }
+                      onSelectDate={(date) => {
+                        setPassengerDate(date);
+                        setCalendarOpen(false);
+                      }}
+                    />
+                  </div>
+                </div>
+                <section
+                  id="booking-passenger-detail"
+                  className="panel booking-passenger-detail"
+                  style={{ marginTop: calendarOpen ? 32 : 0 }}
+                  aria-label="Pasajeros del día"
+                >
+                  <div className="section-heading">
+                    <div>
+                      <span className="eyebrow">
+                        OPERACIÓN DEL DÍA · {passengerDate}
+                      </span>
+                      <h2>Todos los pasajeros del día</h2>
+                      <p className="muted">
+                        {rows.length} pasajeros por trasladar · Todas las
+                        reservas de la fecha, según los filtros. Ordenados por
+                        hora de recojo; los pendientes aparecen al final.
+                      </p>
+                    </div>
+                  </div>
+                  <DataTable
+                    key={passengerDate + serviceFilter + intermediaryFilter}
+                    headers={headers}
+                    rows={rows}
+                    exportName={`pasajeros-${passengerDate}`}
+                    empty="No hay pasajeros programados para esta fecha"
+                    emptyDescription="Selecciona otro día del calendario o registra una nueva reserva."
+                  />
+                </section>
+              </>
+            ) : (
+              <DataTable
+                searchable={selected !== "settlement"}
+                key={`${module}-${selected}`}
+                headers={headers}
+                rows={rows}
+                exportName={`peruandes-${module}-${selected}`}
+                emptyDescription={
+                  ready
+                    ? (tabGuidance[selected] ??
+                      moduleGuidance[module].description)
+                    : "Completa la conexión para consultar y registrar información."
+                }
+                emptyAction={
+                  primaryLabel &&
+                  ready &&
+                  !["history", "audit", "corrections", "settlement"].includes(
+                    selected,
+                  ) ? (
+                    <button className="btn primary" onClick={primary}>
+                      ＋ {primaryLabel}
+                    </button>
+                  ) : undefined
+                }
+                empty={
+                  ready
+                    ? "Todavía no hay registros"
+                    : "La información aparecerá al conectar Supabase"
+                }
+              />
+            )}
           </div>
         </>
       )}
@@ -2335,6 +2531,11 @@ export function ModuleScreen({
         <EditorDialog editor={editor} close={() => setEditor(null)}>
           {editor.kind === "newBooking" ? (
             <BookingForm
+              initialDate={
+                editor.initial
+                  ? text(editor.initial, "departure_date")
+                  : undefined
+              }
               onCancel={() => setEditor(null)}
               ready={ready}
               intermediaries={list("intermediary_options")}
@@ -2345,7 +2546,7 @@ export function ModuleScreen({
                 setNoticeError(false);
                 setEditor(null);
                 setNotice(
-                  "Reserva registrada. Los pasajeros ya aparecen en Operaciones y el cargo del tour en Finanzas.",
+                  "Reserva registrada. Los pasajeros ya aparecen en Operaciones y el cargo del tour en Liquidación.",
                 );
               }}
             />
@@ -2382,7 +2583,7 @@ export function ModuleScreen({
           </p>
           <p className="section-note">
             Para volver a recibir reservas por enlace, podrás generar uno nuevo
-            y compartirlo con el intermediario.
+            y compartirlo con el endosador.
           </p>
           <div className="form-footer">
             <button
