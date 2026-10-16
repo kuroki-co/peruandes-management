@@ -309,7 +309,6 @@ export function BookingForm({
                       required: true,
                     },
                     { key: "pickup_time", label: "Hora de recojo" },
-                    { key: "dietary", label: "Requerimientos alimentarios" },
                   ] as const
                 ).map((f) => (
                   <div className="form-field" key={f.key}>
@@ -343,31 +342,6 @@ export function BookingForm({
                   </div>
                 ))}
               </div>
-              <details className="sensitive-section">
-                <summary>Alergias y medicación relevantes para el tour</summary>
-                <p className="muted">
-                  Información voluntaria. Comparte únicamente lo necesario para
-                  la seguridad del servicio; no aparece en reportes financieros.
-                </p>
-                <div className="form-grid">
-                  <div className="form-field">
-                    <label htmlFor={`${domId}-allergies`}>Alergias</label>
-                    <textarea
-                      id={`${domId}-allergies`}
-                      {...register(`passengers.${index}.allergies`)}
-                    />
-                  </div>
-                  <div className="form-field">
-                    <label htmlFor={`${domId}-medication`}>
-                      Medicación o condiciones comunicadas
-                    </label>
-                    <textarea
-                      id={`${domId}-medication`}
-                      {...register(`passengers.${index}.medication`)}
-                    />
-                  </div>
-                </div>
-              </details>
               <h4>Servicios adicionales</h4>
               <div className="extras-grid">
                 {extras

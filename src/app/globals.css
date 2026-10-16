@@ -2060,3 +2060,54 @@ tbody tr:hover {
     width: 100%;
   }
 }
+.liquidation-workspace > .section-heading {
+  margin: 24px 0 18px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.liquidation-workspace .settlement-summary {
+  margin: 20px 0;
+}
+.liquidation-workspace .settlement-summary > p {
+  font-size: 12px;
+  margin-top: 14px;
+}
+.finance-secondary {
+  margin-top: 24px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.finance-secondary > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.finance-secondary > p {
+  font-size: 12px;
+  margin: 12px 0;
+}
+.finance-secondary .form-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+.liquidation-period-summary {
+  margin: 18px 0;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.liquidation-period-summary h3 {
+  font-size: 13px;
+}
+.liquidation-period-summary .settlement-totals {
+  margin-top: 10px;
+}
+.liquidation-period-summary .settlement-totals b {
+  font-size: 14px;
+}
+.liquidation-period-summary > p {
+  margin-top: 10px;
+  font-size: 11px;
+}

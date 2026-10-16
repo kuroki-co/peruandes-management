@@ -13,6 +13,7 @@ import { moduleGuidance, tabGuidance } from "./experience";
 import { LoadingButton } from "@/components/ui/loading";
 import { TableAction, TableActionLink } from "@/components/ui/table-action";
 import { BookingCalendar } from "./booking-calendar";
+import { LiquidationScreen } from "./liquidation-screen";
 import { performAction } from "./actions";
 import {
   modules,
@@ -153,10 +154,6 @@ export function ModuleScreen({
   const [dateFilter, setDateFilter] = useState(today());
   const [serviceFilter, setServiceFilter] = useState("");
   const [intermediaryFilter, setIntermediaryFilter] = useState("");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [financialParty, setFinancialParty] = useState("");
-  const [direction, setDirection] = useState("receivable");
   const [includeHealth, setIncludeHealth] = useState(false);
   const list = (key: string) => data[key] ?? [];
   const options = (key: string, label = "name"): Option[] =>
@@ -321,9 +318,6 @@ export function ModuleScreen({
       ...f("pickup_time", "Hora de recojo", "time"),
       hint: "Déjala vacía si aún está por coordinar.",
     },
-    f("dietary", "Requerimientos alimentarios", "textarea"),
-    f("allergies", "Alergias relevantes", "textarea"),
-    f("medication", "Medicación comunicada", "textarea"),
     notesField,
   ];
   const movementFields = [
@@ -458,13 +452,6 @@ export function ModuleScreen({
     tabs = [
       { id: "providers", name: "Directorio" },
       { id: "outsourcings", name: "Endosos salientes" },
-    ];
-  if (module === "finance")
-    tabs = [
-      { id: "balances", name: "Deuda por endosador" },
-      { id: "ledger", name: "Cargos y pagos" },
-      { id: "applications", name: "Asignar pagos a deudas" },
-      { id: "settlement", name: "Liquidación" },
     ];
   if (module === "staff")
     tabs = [
@@ -625,17 +612,6 @@ export function ModuleScreen({
           )
         : open("Nuevo proveedor", "providers", providerFields);
   }
-  if (module === "finance") {
-    primaryLabel = "Registrar pago o cargo";
-    primary = () =>
-      open("Registrar pago o cargo", "movement", movementFields, {
-        direction,
-        effective_date: today(),
-        kind: "payment",
-        intermediary_id: direction === "receivable" ? financialParty : "",
-        provider_id: direction === "payable" ? financialParty : "",
-      });
-  }
   if (module === "settings") {
     primaryLabel = selected === "extras" ? "Nuevo adicional" : "Nuevo servicio";
     primary = () =>
@@ -660,20 +636,6 @@ export function ModuleScreen({
   }
 
   const ledger = list("ledger");
-  const accountLedger = ledger.filter(
-    (r) =>
-      text(r, "direction") === direction &&
-      (!financialParty ||
-        text(
-          r,
-          direction === "receivable" ? "intermediary_id" : "provider_id",
-        ) === financialParty),
-  );
-  const periodLedger = accountLedger.filter(
-    (r) =>
-      (!from || text(r, "effective_date") >= from) &&
-      (!to || text(r, "effective_date") <= to),
-  );
   const sum = (rows: Row[]) =>
     rows.reduce((s, r) => s + Math.round(number(r, "amount") * 100), 0) / 100;
   const pending = (side: string) => {
@@ -1509,118 +1471,6 @@ export function ModuleScreen({
         ],
       }));
   }
-  if (module === "finance" && selected === "balances") {
-    headers = [
-      direction === "receivable" ? "Endosador" : "Proveedor",
-      "Cargos acumulados",
-      "Pagos y ajustes a favor",
-      "Deuda pendiente",
-      "Saldo a favor",
-      "Situación",
-    ];
-    const parties =
-      direction === "receivable"
-        ? list("intermediary_options")
-        : list("provider_options");
-    rows = parties
-      .filter((p) => !financialParty || text(p, "id") === financialParty)
-      .map((p) => {
-        const records = ledger.filter(
-          (l) =>
-            text(l, "direction") === direction &&
-            text(
-              l,
-              direction === "receivable" ? "intermediary_id" : "provider_id",
-            ) === text(p, "id"),
-        );
-        const balance = sum(records);
-        return {
-          id: text(p, "id"),
-          cells: [
-            text(p, "name"),
-            money(sum(records.filter((r) => number(r, "amount") > 0))),
-            money(-sum(records.filter((r) => number(r, "amount") < 0))),
-            money(Math.max(0, balance)),
-            money(Math.max(0, -balance)),
-            balance > 0
-              ? "Pendiente"
-              : balance < 0
-                ? "Saldo a favor"
-                : "Al día",
-          ],
-        };
-      });
-  }
-  if (
-    module === "finance" &&
-    (selected === "ledger" || selected === "settlement")
-  ) {
-    headers = [
-      "Fecha",
-      "Cuenta",
-      "Tipo",
-      "Concepto",
-      "Reserva / servicio",
-      "Pasajeros",
-      "Cargo",
-      "Abono",
-      "Referencia",
-    ];
-    rows = [...periodLedger]
-      .sort(
-        (a, b) =>
-          text(a, "effective_date").localeCompare(text(b, "effective_date")) ||
-          text(a, "created_at").localeCompare(text(b, "created_at")),
-      )
-      .map((r) => {
-        const b = bookingById(text(r, "booking_id"));
-        return {
-          id: text(r, "id"),
-          cells: [
-            text(r, "effective_date"),
-            accountName(r),
-            labels[text(r, "kind")],
-            text(r, "concept"),
-            b.id
-              ? `PA-${text(b, "code").padStart(5, "0")} · ${serviceName(text(b, "service_id"))}`
-              : "",
-            list("financial_passengers")
-              .filter((p) => text(p, "booking_id") === text(b, "id"))
-              .map((p) => text(p, "full_name"))
-              .join("; "),
-            number(r, "amount") > 0 ? money(number(r, "amount")) : "",
-            number(r, "amount") < 0 ? money(-number(r, "amount")) : "",
-            text(r, "reference"),
-          ],
-        };
-      });
-  }
-  if (module === "finance" && selected === "applications") {
-    headers = [
-      "Pago o adelanto utilizado",
-      "Deuda cubierta",
-      "Importe asignado",
-      "Fecha",
-    ];
-    rows = list("applications")
-      .filter((a) =>
-        accountLedger.some((r) => text(r, "id") === text(a, "credit_id")),
-      )
-      .map((a) => ({
-        id: text(a, "id"),
-        cells: [
-          ledgerLabel(
-            ledger.find((r) => text(r, "id") === text(a, "credit_id")) ?? {},
-          ),
-          text(
-            ledger.find((r) => text(r, "id") === text(a, "charge_id")) ?? {},
-            "concept",
-          ),
-          money(number(a, "amount")),
-          dateInLima(text(a, "created_at")),
-        ],
-      }));
-  }
   const metricValue = (v: string | number) => (ready ? v : "—");
   const dateBookings = list("bookings").filter(
     (b) =>
@@ -1672,7 +1522,7 @@ export function ModuleScreen({
     },
     finance: {
       label: "Saldo neto de la selección",
-      value: money(sum(accountLedger)),
+      value: money(pending("receivable")),
       hint: "Según el tipo de cuenta y titular",
     },
     settings: {
@@ -2005,6 +1855,101 @@ export function ModuleScreen({
             </>
           )}
         </>
+      ) : module === "finance" ? (
+        <LiquidationScreen
+          data={data}
+          ready={ready}
+          onRegister={(party, kind) =>
+            open(
+              (kind === "payment"
+                ? "Registrar pago"
+                : kind === "advance"
+                  ? "Registrar adelanto"
+                  : kind === "charge"
+                    ? "Agregar cargo"
+                    : "Corregir importe") + ` · ${intermediaryName(party)}`,
+              "movement",
+              movementFields
+                .filter(
+                  (field) =>
+                    ![
+                      "direction",
+                      "provider_id",
+                      "intermediary_id",
+                      "kind",
+                    ].includes(field.key),
+                )
+                .map((field) =>
+                  field.key === "booking_id"
+                    ? {
+                        ...field,
+                        options: list("bookings")
+                          .filter((b) => text(b, "intermediary_id") === party)
+                          .map((b) => ({
+                            value: text(b, "id"),
+                            label: `PA-${text(b, "code").padStart(5, "0")} · ${serviceName(text(b, "service_id"))}`,
+                          })),
+                      }
+                    : field,
+                ),
+              {
+                direction: "receivable",
+                intermediary_id: party,
+                provider_id: "",
+                kind,
+                effective_date: today(),
+                concept:
+                  kind === "payment"
+                    ? "Pago recibido"
+                    : kind === "advance"
+                      ? "Adelanto recibido"
+                      : "",
+              },
+            )
+          }
+          onAssign={(credit) =>
+            open(
+              "Asignar pago a deuda",
+              "application",
+              [
+                f(
+                  "charge_id",
+                  "Deuda que deseas cubrir",
+                  "select",
+                  ledger
+                    .filter(
+                      (row) =>
+                        text(row, "direction") === "receivable" &&
+                        text(row, "intermediary_id") ===
+                          text(credit, "intermediary_id") &&
+                        number(row, "amount") > 0 &&
+                        number(row, "amount") -
+                          applied(text(row, "id"), "charge_id") >
+                          0,
+                    )
+                    .map((row) => ({
+                      value: text(row, "id"),
+                      label:
+                        ledgerLabel(row) +
+                        ` · Pendiente ${money(number(row, "amount") - applied(text(row, "id"), "charge_id"))}`,
+                    })),
+                  true,
+                ),
+                {
+                  ...f(
+                    "amount",
+                    "Importe a asignar",
+                    "number",
+                    undefined,
+                    true,
+                  ),
+                  hint: `Pago disponible: ${money(-number(credit, "amount") - applied(text(credit, "id"), "credit_id"))}. Esta asignación no crea un nuevo abono.`,
+                },
+              ],
+              { credit_id: text(credit, "id") },
+            )
+          }
+        />
       ) : (
         <>
           {module === "intermediaries" || module === "bookings" ? (
@@ -2129,197 +2074,6 @@ export function ModuleScreen({
             (module === "operations" &&
               ["manifest", "departures"].includes(selected))) &&
             filters}
-          {module === "finance" && (
-            <>
-              <div className="filter-panel no-print">
-                <div className="form-field">
-                  <label htmlFor="direction">Tipo de cuenta</label>
-                  <select
-                    id="direction"
-                    value={direction}
-                    onChange={(e) => {
-                      setDirection(e.target.value);
-                      setFinancialParty("");
-                    }}
-                  >
-                    <option value="receivable">Cuentas por cobrar</option>
-                    <option value="payable">Cuentas por pagar</option>
-                  </select>
-                </div>
-                <div className="form-field">
-                  <label htmlFor="party">
-                    {direction === "receivable" ? "Endosador" : "Proveedor"}
-                  </label>
-                  <select
-                    id="party"
-                    value={financialParty}
-                    onChange={(e) => setFinancialParty(e.target.value)}
-                  >
-                    <option value="">Todas las cuentas</option>
-                    {(direction === "receivable"
-                      ? allIntermediaries
-                      : allProviders
-                    ).map((o) => (
-                      <option value={o.value} key={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {["ledger", "settlement"].includes(selected) && (
-                  <>
-                    <div className="form-field">
-                      <label htmlFor="from">Desde</label>
-                      <input
-                        id="from"
-                        type="date"
-                        max={to || undefined}
-                        value={from}
-                        onChange={(e) => setFrom(e.target.value)}
-                      />
-                    </div>
-                    <div className="form-field">
-                      <label htmlFor="to">Hasta</label>
-                      <input
-                        id="to"
-                        type="date"
-                        min={from || undefined}
-                        value={to}
-                        onChange={(e) => setTo(e.target.value)}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-              {selected === "settlement" && (
-                <div className="settlement-summary panel">
-                  <h2>
-                    Liquidación{" "}
-                    {direction === "receivable"
-                      ? "de endosadores"
-                      : "de proveedores"}
-                  </h2>
-                  <p>
-                    {financialParty
-                      ? direction === "receivable"
-                        ? intermediaryName(financialParty)
-                        : providerName(financialParty)
-                      : "Todas las cuentas"}{" "}
-                    · {from || "Inicio"} — {to || "Actualidad"}
-                  </p>
-                  <div className="settlement-totals">
-                    <span>
-                      Saldo anterior{" "}
-                      <b>
-                        {money(
-                          sum(
-                            accountLedger.filter(
-                              (r) => from && text(r, "effective_date") < from,
-                            ),
-                          ),
-                        )}
-                      </b>
-                    </span>
-                    <span>
-                      Cargos y ajustes{" "}
-                      <b>
-                        {money(
-                          sum(
-                            periodLedger.filter((r) => number(r, "amount") > 0),
-                          ),
-                        )}
-                      </b>
-                    </span>
-                    <span>
-                      Abonos y ajustes a favor{" "}
-                      <b>
-                        {money(
-                          -sum(
-                            periodLedger.filter((r) => number(r, "amount") < 0),
-                          ),
-                        )}
-                      </b>
-                    </span>
-                    <span>
-                      Saldo final{" "}
-                      <b>
-                        {money(
-                          sum(
-                            accountLedger.filter(
-                              (r) => !to || text(r, "effective_date") <= to,
-                            ),
-                          ),
-                        )}
-                      </b>
-                    </span>
-                  </div>
-                </div>
-              )}
-              {selected === "applications" && (
-                <div className="inline-action no-print">
-                  <p>
-                    Aplica pagos o adelantos a cargos concretos de la misma
-                    cuenta.
-                  </p>
-                  <button
-                    className="btn"
-                    onClick={() =>
-                      open("Asignar pago a deuda", "application", [
-                        f(
-                          "credit_id",
-                          "Pago o adelanto disponible",
-                          "select",
-                          accountLedger
-                            .filter(
-                              (r) =>
-                                ["payment", "advance", "adjustment"].includes(
-                                  text(r, "kind"),
-                                ) &&
-                                number(r, "amount") < 0 &&
-                                -number(r, "amount") -
-                                  applied(text(r, "id"), "credit_id") >
-                                  0,
-                            )
-                            .map((r) => ({
-                              value: text(r, "id"),
-                              label: `${ledgerLabel(r)} · Disponible ${money(-number(r, "amount") - applied(text(r, "id"), "credit_id"))}`,
-                            })),
-                          true,
-                        ),
-                        f(
-                          "charge_id",
-                          "Deuda que deseas cubrir",
-                          "select",
-                          accountLedger
-                            .filter(
-                              (r) =>
-                                number(r, "amount") > 0 &&
-                                number(r, "amount") -
-                                  applied(text(r, "id"), "charge_id") >
-                                  0,
-                            )
-                            .map((r) => ({
-                              value: text(r, "id"),
-                              label: ledgerLabel(r),
-                            })),
-                          true,
-                        ),
-                        f(
-                          "amount",
-                          "Importe a aplicar",
-                          "number",
-                          undefined,
-                          true,
-                        ),
-                      ])
-                    }
-                  >
-                    Asignar pago a deuda
-                  </button>
-                </div>
-              )}
-            </>
-          )}
           {module === "operations" && selected === "manifest" && (
             <h2 className="report-heading">
               Manifiesto operativo · {dateFilter || "Todas las fechas"} ·{" "}

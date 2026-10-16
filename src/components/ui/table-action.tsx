@@ -3,6 +3,7 @@ import type { ComponentProps, ButtonHTMLAttributes } from "react";
 import { Spinner } from "./loading";
 
 type IconName =
+  | "eye"
   | "edit"
   | "history"
   | "copy"
@@ -14,6 +15,7 @@ type IconName =
   | "attendance"
   | "remove";
 const paths: Record<IconName, string> = {
+  eye: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z",
   edit: "m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15v5Z",
   history: "M4 5h16v15H4zM8 3v4m8-4v4M4 10h16m-12 4h3m2 0h3m-8 3h3",
   copy: "M9 9h11v11H9zM15 9V4H4v11h5",
